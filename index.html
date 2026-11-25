@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interface do SGF — Trabalho Prático da U2 (Dupla 05)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="container">
+      <p class="instituicao">UNIVERSIDADE CATÓLICA DO SALVADOR • SISTEMAS DE APOIO À DECISÃO • 2026.2</p>
+      <h1>Trabalho Prático da U2 — Interface do SGF</h1>
+      <p class="subtitulo">
+        Consulta interativa de indicadores descritivos, correlação de Pearson e classificação ABC por vizinhança (KNN).
+      </p>
+      <div id="status-execucao" class="status-badge" role="status" aria-live="polite">
+        Verificando modo de execução...
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- 1. IDENTIFICAÇÃO -->
+    <section class="card" aria-labelledby="titulo-identificacao">
+      <div class="section-header">
+        <h2 id="titulo-identificacao">1. Identificação do Projeto e Base SGF</h2>
+        <span class="tag">Origem identificada</span>
+      </div>
+
+      <div class="grid-info">
+        <div class="info-box">
+          <span class="info-label">Equipe</span>
+          <strong class="info-value" id="info-equipe">Dupla 05</strong>
+        </div>
+        <div class="info-box">
+          <span class="info-label">Integrantes</span>
+          <strong class="info-value" id="info-integrantes"> Gabriel Silva Nunes  • Felipe Juan Azevedo da Paixão • Wesley Oliveira Cintra </strong>
+        </div>
+        <div class="info-box">
+          <span class="info-label">Planilha de referência</span>
+          <strong class="info-value" id="info-planilha">Planilha SGF — Dupla 05 (Abas 01 a 06)</strong>
+        </div>
+        <div class="info-box">
+          <span class="info-label">Registros considerados</span>
+          <strong class="info-value" id="info-registros">
+            Base Específica: 44 itens (30 treino / 14 teste) • Base Geral: 356 itens
+          </strong>
+        </div>
+      </div>
+
+      <p class="nota-origem" id="nota-origem-dados">
+        Os cálculos desta página utilizam cópias CSV UTF-8 fiéis da planilha SGF original
+        (<code>dados/base_especifica.csv</code> e <code>dados/base_geral.csv</code>, mantendo todos os itens tratados,
+        inclusive a linha 45 com parcela R$ 0,00). Os indicadores e o KNN são recalculados em tempo real e conferidos
+        com os valores das Abas 05 e 06 da planilha.
+      </p>
+    </section>
+
+    <!-- 2. INDICADORES ESTATÍSTICOS -->
+    <section class="card" aria-labelledby="titulo-estatistica">
+      <div class="section-header">
+        <h2 id="titulo-estatistica">2. Indicadores Estatísticos e Correlação (Base SGF)</h2>
+        <div class="base-switch" role="group" aria-label="Selecionar base de dados">
+          <button type="button" class="btn-switch active" id="btn-base-especifica" data-base="especifica">
+            Base Específica (N = 44 • base do KNN)
+          </button>
+          <button type="button" class="btn-switch" id="btn-base-geral" data-base="geral">
+            Base Geral (N = 356)
+          </button>
+        </div>
+      </div>
+
+      <p class="origem-ativa" id="origem-indicadores">
+        Origem atual: <code>dados/base_especifica.csv</code> (cálculo em tempo real).
+      </p>
+
+      <!-- Três destaques obrigatórios -->
+      <div class="grid-kpis">
+        <article class="kpi-card">
+          <span class="kpi-tipo">Tendência Central</span>
+          <h3>Média e Mediana</h3>
+          <div class="kpi-detalhes" id="kpi-tendencia-central"></div>
+        </article>
+
+        <article class="kpi-card">
+          <span class="kpi-tipo">Dispersão (populacional)</span>
+          <h3>Desvio-Padrão e Coef. de Variação</h3>
+          <div class="kpi-detalhes" id="kpi-dispersao"></div>
+        </article>
+
+        <article class="kpi-card">
+          <span class="kpi-tipo">Associação Linear</span>
+          <h3>Correlação de Pearson (QTD × VLR_UNIT)</h3>
+          <div class="kpi-detalhes" id="kpi-pearson"></div>
+          <p class="kpi-aviso">
+            <strong>Regra técnica:</strong> Correlação próxima de 0 indica associação linear fraca; correlação
+            <strong>não comprova relação de causa e efeito</strong>. Caso alguma variável tenha desvio-padrão zero,
+            Pearson torna-se indefinido por divisão por zero.
+          </p>
+        </article>
+      </div>
+
+      <!-- Tabela completa de dispersão -->
+      <h3 class="subsecao">Quadro Completo de Variáveis e Unidades</h3>
+      <div class="table-wrap">
+        <table id="tabela-dispersao">
+          <thead>
+            <tr>
+              <th>Variável</th>
+              <th>Unidade</th>
+              <th>N</th>
+              <th>Média</th>
+              <th>Mediana</th>
+              <th>Desvio-padrão (pop.)</th>
+              <th>Coef. de variação (DP ÷ Média)</th>
+              <th>Mínimo</th>
+              <th>Máximo</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Resumo Curva ABC + Conferência com Aba 05 -->
+      <div class="grid-duas-colunas">
+        <div>
+          <h3 class="subsecao">Painel da Curva ABC (<span id="rotulo-base-abc">Base Específica</span>)</h3>
+          <div class="table-wrap">
+            <table id="tabela-abc">
+              <thead>
+                <tr>
+                  <th>Classe</th>
+                  <th>Critério</th>
+                  <th>Qtd Itens</th>
+                  <th>% Itens</th>
+                  <th>Valor Total (R$)</th>
+                  <th>% Acumulado</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="subsecao">Origem e Conferência com a Planilha SGF (Aba 05)</h3>
+          <div class="table-wrap">
+            <table id="tabela-conferencia">
+              <thead>
+                <tr>
+                  <th>Indicador conferido</th>
+                  <th>Calculado agora</th>
+                  <th>Planilha (Aba 05)</th>
+                  <th>Origem / Status</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. CONSULTA KNN -->
+    <section class="card" aria-labelledby="titulo-knn">
+      <div class="section-header">
+        <h2 id="titulo-knn">3. Consulta KNN — Classificação ABC por Vizinhança</h2>
+        <span class="tag tag-azul">Base Específica (Dupla 05)</span>
+      </div>
+
+      <div class="parametros-knn">
+        <div><strong>Atributos (X):</strong> <code>QTD</code> e <code>VLR_UNIT</code> (sem <code>CLASSE_ABC</code> e sem <code>PARCELA</code>, evitando vazamento)</div>
+        <div><strong>Alvo (y):</strong> <code>CLASSE_ABC</code> (A, B ou C)</div>
+        <div><strong>Divisão:</strong> 30 treino / 14 teste (<code>test_size=0,30</code>, <code>random_state=42</code>, <code>stratify=y</code>)</div>
+        <div><strong>Padronização:</strong> <code>StandardScaler</code> ajustado apenas no treino (DP QTD = 338,09 | DP VLR = R$ 1.405,17)</div>
+      </div>
+
+      <div class="knn-controles-grid">
+        <!-- Formulário de consulta interativa -->
+        <form id="form-knn" class="painel-form" novalidate>
+          <h3>Consulta Interativa (Novo Item ou Simulação)</h3>
+          <p class="ajuda-texto">
+            Informe <code>QTD</code> e <code>VLR_UNIT</code> para classificar um item com base nos 30 registros de treino.
+          </p>
+
+          <div class="form-row">
+            <div class="campo">
+              <label for="input-qtd">QTD (Quantidade — unidade do item)</label>
+              <input id="input-qtd" name="qtd" type="text" inputmode="decimal" placeholder="Ex.: 100" value="100" autocomplete="off">
+            </div>
+
+            <div class="campo">
+              <label for="input-vlr">VLR_UNIT (Valor unitário — R$)</label>
+              <input id="input-vlr" name="vlr_unit" type="text" inputmode="decimal" placeholder="Ex.: 60" value="60" autocomplete="off">
+            </div>
+
+            <div class="campo campo-k">
+              <label for="select-k">Valor de k</label>
+              <select id="select-k" name="k">
+                <option value="3" selected>k = 3 vizinhos</option>
+                <option value="5">k = 5 vizinhos</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="botoes-acao">
+            <button type="submit" class="btn btn-primario" id="btn-classificar">Classificar com KNN</button>
+            <button type="button" class="btn btn-secundario" id="btn-exemplo-lab">Carregar exemplo da Aba 06 (100; R$ 60; k=3)</button>
+            <button type="button" class="btn btn-alerta" id="btn-simular-erro">Testar entrada inválida</button>
+            <button type="button" class="btn btn-neutro" id="btn-limpar">Limpar</button>
+          </div>
+        </form>
+
+        <!-- Consulta demonstrativa do laboratório KNN -->
+        <div class="painel-form painel-demo">
+          <h3>Consulta demonstrativa — resultado do laboratório KNN</h3>
+          <p class="ajuda-texto">
+            Selecione qualquer um dos 14 casos reais do conjunto de teste da Aba 06 (Tabela de Apoio) para visualizar o resultado do laboratório e comprovar o recálculo.
+          </p>
+
+          <div class="form-row">
+            <div class="campo campo-full">
+              <label for="select-caso-lab">Caso de teste da Aba 06 (Base Específica)</label>
+              <select id="select-caso-lab"></select>
+            </div>
+          </div>
+
+          <div class="botoes-acao">
+            <button type="button" class="btn btn-secundario" id="btn-visualizar-caso">
+              Visualizar caso do laboratório
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Caixa de erro visível -->
+      <div id="erro-box" class="erro-box hidden" role="alert" aria-live="assertive">
+        <strong>Entrada inválida detectada:</strong>
+        <span id="erro-mensagem"></span>
+      </div>
+
+      <!-- Caixa de resultado válido -->
+      <div id="resultado-knn" class="resultado-box hidden" aria-live="polite">
+        <div class="resultado-topo">
+          <div>
+            <span class="origem-consulta-badge" id="badge-origem-consulta"></span>
+            <h3>Resultado da Classificação KNN</h3>
+          </div>
+          <div class="classe-destaque" id="classe-prevista-badge">Classe -</div>
+        </div>
+
+        <div class="grid-resultado-resumo">
+          <div class="resumo-item">
+            <span>QTD consultada</span>
+            <strong id="res-qtd">-</strong>
+          </div>
+          <div class="resumo-item">
+            <span>VLR_UNIT consultado</span>
+            <strong id="res-vlr">-</strong>
+          </div>
+          <div class="resumo-item">
+            <span>Parâmetro k</span>
+            <strong id="res-k">-</strong>
+          </div>
+          <div class="resumo-item">
+            <span>Votação (A / B / C)</span>
+            <strong id="res-votos">-</strong>
+          </div>
+          <div class="resumo-item">
+            <span>Parcela estimada (informativa)</span>
+            <strong id="res-parcela">-</strong>
+          </div>
+        </div>
+
+        <div id="correspondencia-lab" class="correspondencia-box hidden"></div>
+
+        <h4 class="subsecao">Evidência — k Vizinhos Mais Próximos no Treino (Distância Euclidiana Padronizada)</h4>
+        <div class="table-wrap">
+          <table id="tabela-vizinhos">
+            <thead>
+              <tr>
+                <th>Vizinho</th>
+                <th>Linha Aba 02</th>
+                <th>Código</th>
+                <th>Descrição do item</th>
+                <th>Unid.</th>
+                <th>QTD</th>
+                <th>VLR_UNIT (R$)</th>
+                <th>Classe real</th>
+                <th>Distância padronizada</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. INTERPRETAÇÃO -->
+    <section class="card" aria-labelledby="titulo-interpretacao">
+      <div class="section-header">
+        <h2 id="titulo-interpretacao">4. Interpretação da Decisão e Limites do Modelo</h2>
+        <span class="tag">Análise crítica</span>
+      </div>
+
+      <div id="bloco-interpretacao" class="interpretacao-grid">
+        <div class="interp-card">
+          <h3>O que a consulta sugere para a análise do orçamento</h3>
+          <p id="interp-resumo">Execute uma consulta KNN acima para visualizar a conclusão contextualizada.</p>
+          <p id="interp-orcamento"></p>
+        </div>
+        <div class="interp-card interp-alerta">
+          <h3>Por que não substitui a Curva ABC e o julgamento técnico</h3>
+          <p id="interp-limites">
+            A previsão por vizinhança (KNN) usa apenas <code>QTD</code> e <code>VLR_UNIT</code> para estimar semelhança com itens históricos do treino.
+            Ela <strong>não substitui</strong> o julgamento sobre o valor total do item (<code>QTD × VLR_UNIT</code>), sua criticidade técnica/operacional
+            para a obra nem a composição completa da Curva ABC (calculada sobre a soma acumulada do orçamento inteiro).
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. DESEMPENHO DO LABORATÓRIO KNN -->
+    <section class="card" aria-labelledby="titulo-desempenho">
+      <div class="section-header">
+        <h2 id="titulo-desempenho">5. Validação do Experimento KNN no Conjunto de Teste (Aba 06)</h2>
+        <span class="tag">Acurácia k=3 e k=5: 64,29% (9/14)</span>
+      </div>
+
+      <p class="ajuda-texto">
+        Matrizes de confusão e conferência dos 14 registros de teste da Base Específica. Em <code>k=3</code>, a classe mais confundida foi a
+        <strong>Classe C</strong> (3 erros: 1 previsto como A e 2 como B).
+      </p>
+
+      <div class="grid-duas-colunas">
+        <div>
+          <h3 class="subsecao">Matriz de Confusão — k = 3 (Acurácia: 0,6429)</h3>
+          <div class="table-wrap">
+            <table id="matriz-k3" class="tabela-compacta">
+              <thead>
+                <tr>
+                  <th>Real \ Previsto</th>
+                  <th>A</th>
+                  <th>B</th>
+                  <th>C</th>
+                  <th>Erros da classe</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="subsecao">Matriz de Confusão — k = 5 (Acurácia: 0,6429)</h3>
+          <div class="table-wrap">
+            <table id="matriz-k5" class="tabela-compacta">
+              <thead>
+                <tr>
+                  <th>Real \ Previsto</th>
+                  <th>A</th>
+                  <th>B</th>
+                  <th>C</th>
+                  <th>Erros da classe</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <details class="detalhes-teste">
+        <summary>Ver conferência completa dos 14 casos de teste (Laboratório Aba 06 vs. Cálculo em tempo real)</summary>
+        <div class="table-wrap">
+          <table id="tabela-casos-teste">
+            <thead>
+              <tr>
+                <th>Linha Aba 02</th>
+                <th>Código</th>
+                <th>QTD</th>
+                <th>VLR_UNIT (R$)</th>
+                <th>Classe Real</th>
+                <th>Prev. Lab (k=3)</th>
+                <th>Recalc. (k=3)</th>
+                <th>Prev. Lab (k=5)</th>
+                <th>Recalc. (k=5)</th>
+                <th>Correspondência</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <div class="container">
+      <p>
+        Interface do SGF — Dupla 05 • Sistemas de Apoio à Decisão (UCSAL 2026.2) • HTML, CSS e JavaScript nativos + Backend Python puro.
+      </p>
+    </div>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
