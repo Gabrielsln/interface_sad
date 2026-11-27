@@ -25,8 +25,9 @@ CSV_GERAL = os.path.join(DADOS_DIR, "base_geral.csv")
 REFERENCIA_LAB = {
     "equipe": "Dupla 05",
     "integrantes": [
-        "[Nome do Integrante 1]",
-        "[Nome do Integrante 2]",
+        "Gabriel Silva Nunes",
+        "Felipe Juan Azevedo da Paixão",
+        "Wesley Oliveira Cintra",
     ],
     "planilha": "Planilha SGF — Dupla 05 (Abas 01 a 06)",
     "estatistica": {

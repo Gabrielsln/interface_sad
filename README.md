@@ -53,3 +53,10 @@ interface_sad/
     └── base_geral.csv         # 356 registros da Base Geral (Curva ABC e estatísticas)
 ```
 
+## Limitações do Protótipo
+
+- O classificador KNN utiliza apenas `QTD` e `VLR_UNIT` padronizados sobre os 30 registros de treino da Base Específica (acurácia de 64,29% nos 14 itens de teste, com maior confusão na Classe C).
+- A classe prevista por vizinhança não é uma nova Curva ABC recalculada sobre o orçamento completo e não substitui o julgamento técnico sobre valor total (`PARCELA`), criticidade operacional e composição da Curva ABC.
+- A correlação de Pearson mede apenas associação linear entre variáveis na base atual e não comprova relação de causa e efeito nem variação temporal de preços.
+
+
